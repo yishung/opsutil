@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 
 # (MUST) read the host addresses from environment , split by ','
 hosts = os.getenv('hosts','')
@@ -12,11 +13,30 @@ timeout = os.getenv('timeout',30)
 
 
 def sendToSlack(msg):
-    from slacker import Slacker
-    token = os.getenv('slack_token',"")
-    if token:
-        slack = Slacker(token)
-        slack.chat.post_message('#general', msg)
+    from slackclient import SlackClient
+    print('sendToSlack:\n' + msg)
+
+    # (MUST) slack api token
+    token = os.getenv('slack_token','')
+
+    # (OPTIONAL) target channel
+    channel = os.getenv('channel','#general')
+
+    if not token:
+        print("cannot find slack_token!!")
+        sys.exit(1)
+
+    slack_client = SlackClient(token)
+    rt = slack_client.api_call(
+        "chat.postMessage",
+        channel=channel,
+        text= msg,
+        username='detect_port'
+    )
+
+    if not rt.get('ok',False):
+        print('sendToSlack failed!!')
+        sys.exit(1)
 
 
 if hosts and port:
@@ -32,7 +52,7 @@ if hosts and port:
                 msg = 'failed cmd'
             msg += ('\n' + cmd)
 
-    if not msg:
+    if msg:
         sendToSlack(msg)
 
 
